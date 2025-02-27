@@ -32,5 +32,8 @@ def merge_pdfs():
 
     return send_file(output_filename, as_attachment=True, download_name="merged.pdf")
 
-if __name__ == "__main__":
-    app.run(debug=True)
+import os
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
