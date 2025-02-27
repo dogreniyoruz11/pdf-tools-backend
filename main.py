@@ -1,34 +1,51 @@
 from flask import Flask, request, send_file
-from PyPDF2 import PdfMerger
 import os
+import PyPDF2
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-@app.route('/merge', methods=['POST'])
-def merge_pdfs():
-    if 'files' not in request.files:
-        return {"error": "No files part in the request"}, 400
+UPLOAD_FOLDER = "/tmp"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-    files = request.files.getlist('files')
-    
-    if not files or len(files) < 2:
+@app.route("/")
+def home():
+    return "PDF Merger API is running!", 200
+
+@app.route("/merge", methods=["POST"])
+def merge_pdfs():
+    if "files" not in request.files:
+        return {"error": "No files part"}, 400
+
+    files = request.files.getlist("files")
+    if len(files) < 2:
         return {"error": "Please upload at least 2 PDF files"}, 400
 
-    merger = PdfMerger()
+    merger = PyPDF2.PdfMerger()
 
-    for file in files:
-        if file.filename == '':
-            return {"error": "One or more files have no filename"}, 400
-        merger.append(file)
+    file_paths = []
+    try:
+        for file in files:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(file_path)
+            file_paths.append(file_path)
+            merger.append(file_path)
 
-    output_filename = "merged.pdf"
-    merger.write(output_filename)
-    merger.close()
+        output_path = os.path.join(app.config["UPLOAD_FOLDER"], "merged.pdf")
+        merger.write(output_path)
+        merger.close()
 
-    return send_file(output_filename, as_attachment=True)
+        return send_file(output_path, as_attachment=True)
 
+    except Exception as e:
+        return {"error": str(e)}, 500
+    finally:
+        for path in file_paths:
+            if os.path.exists(path):
+                os.remove(path)
 
-if __name__ == '__main__':
-    import os
-    port = int(os.environ.get("PORT", 5000))  # ✅ Ensure it runs on PORT 5000
-    app.run(host='0.0.0.0', port=port, debug=True)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
