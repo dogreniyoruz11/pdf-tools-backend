@@ -2,10 +2,10 @@ from flask import Flask, request, send_file, jsonify
 import os
 import PyPDF2
 from werkzeug.utils import secure_filename
-from flask_cors import CORS  # <-- Add this
+from flask_cors import CORS  # 🚀 Import CORS
 
 app = Flask(__name__)
-CORS(app)  # <-- Enable CORS for all routes
+CORS(app, resources={r"/merge": {"origins": "https://pdf.seotoolfusion.com"}})  # 🚀 Allow Requests from Your Website
 
 UPLOAD_FOLDER = "/tmp"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -13,16 +13,16 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
 def home():
-    return jsonify({"message": "PDF Merger API is running!"})
+    return jsonify({"message": "✅ PDF Merger API is running!"})
 
 @app.route("/merge", methods=["POST"])
 def merge_pdfs():
     if "files" not in request.files:
-        return jsonify({"error": "No files part"}), 400
+        return jsonify({"error": "No files found. Please upload at least 2 PDFs."}), 400
 
     files = request.files.getlist("files")
     if len(files) < 2:
-        return jsonify({"error": "Please upload at least 2 PDF files"}), 400
+        return jsonify({"error": "At least 2 PDF files required."}), 400
 
     merger = PyPDF2.PdfMerger()
     file_paths = []
