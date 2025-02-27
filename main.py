@@ -27,5 +27,7 @@ def merge_pdfs():
 
     return send_file(output_filename, as_attachment=True)
 
+# ✅ Fix: Ensure Flask Runs on Railway's Port (8080)
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8080))  # Use Railway's PORT
+    app.run(host='0.0.0.0', port=port, debug=True)
