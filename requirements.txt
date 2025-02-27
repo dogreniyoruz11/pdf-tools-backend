@@ -1,3 +1,3 @@
-flask
-pypdf2
+Flask
 gunicorn
+PyPDF2
