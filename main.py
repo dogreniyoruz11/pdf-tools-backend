@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, jsonify
 import os
 import PyPDF2
 from werkzeug.utils import secure_filename
@@ -11,20 +11,20 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
 def home():
-    return "PDF Merger API is running!", 200
+    return jsonify({"message": "PDF Merger API is running!"})
 
 @app.route("/merge", methods=["POST"])
 def merge_pdfs():
     if "files" not in request.files:
-        return {"error": "No files part"}, 400
+        return jsonify({"error": "No files part"}), 400
 
     files = request.files.getlist("files")
     if len(files) < 2:
-        return {"error": "Please upload at least 2 PDF files"}, 400
+        return jsonify({"error": "Please upload at least 2 PDF files"}), 400
 
     merger = PyPDF2.PdfMerger()
-
     file_paths = []
+
     try:
         for file in files:
             filename = secure_filename(file.filename)
@@ -40,7 +40,7 @@ def merge_pdfs():
         return send_file(output_path, as_attachment=True)
 
     except Exception as e:
-        return {"error": str(e)}, 500
+        return jsonify({"error": str(e)}), 500
     finally:
         for path in file_paths:
             if os.path.exists(path):
