@@ -2,10 +2,10 @@ from flask import Flask, request, send_file, jsonify
 import os
 import PyPDF2
 from werkzeug.utils import secure_filename
-from flask_cors import CORS  # 🔥 Enable CORS
+from flask_cors import CORS  # ✅ Add CORS properly
 
 app = Flask(__name__)
-CORS(app)  # 🔥 Allow all origins
+CORS(app)  # ✅ Allow all origins
 
 UPLOAD_FOLDER = "/tmp"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -18,35 +18,46 @@ def home():
 @app.route("/merge", methods=["POST"])
 def merge_pdfs():
     if "files" not in request.files:
-        return jsonify({"error": "No files found. Please upload at least 2 PDFs."}), 400
+        return jsonify({"error": "No files provided. Please upload at least 2 PDFs."}), 400
 
     files = request.files.getlist("files")
     if len(files) < 2:
-        return jsonify({"error": "At least 2 PDF files required."}), 400
+        return jsonify({"error": "Please upload at least 2 PDF files to merge."}), 400
 
     merger = PyPDF2.PdfMerger()
     file_paths = []
 
     try:
         for file in files:
+            if not file.filename.lower().endswith(".pdf"):
+                return jsonify({"error": f"Invalid file type: {file.filename}. Only PDF files are allowed."}), 400
+
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(file_path)
             file_paths.append(file_path)
-            merger.append(file_path)
+
+            with open(file_path, "rb") as f:
+                merger.append(f)
 
         output_path = os.path.join(app.config["UPLOAD_FOLDER"], "merged.pdf")
-        merger.write(output_path)
+        with open(output_path, "wb") as output_file:
+            merger.write(output_file)
+
         merger.close()
 
-        return send_file(output_path, as_attachment=True)
+        return send_file(output_path, as_attachment=True, mimetype="application/pdf", download_name="merged.pdf")
 
+    except PyPDF2.errors.PdfReadError:
+        return jsonify({"error": "One or more PDF files are corrupted or not readable."}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         for path in file_paths:
             if os.path.exists(path):
                 os.remove(path)
+        if os.path.exists(output_path):
+            os.remove(output_path)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
